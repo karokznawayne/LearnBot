@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Self-Learning Chatbot</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(-45deg, #ff9a9e, #fad0c4, #a1c4fd, #c2e9fb);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+/*  */
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    #chatbox {
+      width: 90%;
+      max-width: 700px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 20px;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.2);
+      padding: 20px;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      animation: slideUp 1s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(40px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    #messages {
+      max-height: 400px;
+      overflow-y: auto;
+      margin-bottom: 15px;
+      padding-right: 10px;
+    }
+
+    .message {
+      display: flex;
+      align-items: flex-start;
+      margin: 10px 0;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .avatar {
+      font-size: 24px;
+      margin-right: 10px;
+    }
+
+    .bubble {
+      padding: 12px 16px;
+      border-radius: 20px;
+      max-width: 75%;
+      line-height: 1.5;
+    }
+
+    .user .bubble {
+      background-color: #dcf8c6;
+      margin-left: auto;
+    }
+
+    .bot .bubble {
+      background-color: #f1f0f0;
+      margin-right: auto;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: none;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+    }
+
+    button, select {
+      padding: 10px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    button:hover, select:hover {
+      transform: scale(1.05);
+    }
+
+    .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="chatbox">
+    <h2>LearnBot</h2>
+    <div class="control-row">
+      <label for="personality">Personality:</label>
+      <select id="personality">
+        <option value="curious">Curious</option>
+        <option value="humorous">Humorous</option>
+        <option value="formal">Formal</option>
+      </select>
+      <button onclick="clearMemory()">🧹 Clear Memory</button>
+    </div>
+    <div id="messages"></div>
+    <div class="input-row">
+      <input type="text" id="userInput" placeholder="Type your message..." />
+      <button onclick="sendMessage()">➡️</button>
+      <button onclick="startVoice()">🎤</button>
+    </div>
+  </div>
+
+  <script>
+    const input = document.getElementById("userInput");
+    const messagesDiv = document.getElementById("messages");
+    const personalitySelect = document.getElementById("personality");
+
+    let memory = JSON.parse(localStorage.getItem("chat_memory")) || [];
+    let knowledge = JSON.parse(localStorage.getItem("chat_knowledge")) || {
+      "what is gravity": "Gravity is the force that pulls objects toward each other.",
+      "what is water": "Water is a molecule made of two hydrogen atoms and one oxygen atom.",
+      "who is albert einstein": "Albert Einstein was a theoretical physicist known for the theory of relativity.",
+      "what is the sun": "The sun is the star at the center of our solar system.",
+      "what is love": "Love is a deep feeling of affection and care for someone or something.",
+      "what is a computer": "A computer is an electronic device that processes data and performs tasks.",
+ "what is the moon": "The moon is Earth’s natural satellite that orbits around our planet.",
+  "what is air": "Air is a mixture of gases that make up Earth’s atmosphere, mainly nitrogen and oxygen.",
+  "what is time": "Time is the ongoing progression of events from the past to the present and into the future.",
+  "what is light": "Light is a form of energy that enables us to see and travels in waves.",
+  "what is sound": "Sound is a vibration that travels through air or another medium and can be heard when it reaches the ear.",
+  "what is electricity": "Electricity is the flow of electric charge used to power devices and machines.",
+  "what is the internet": "The internet is a global network that connects millions of computers for communication and information sharing.",
+  "what is space": "Space is the vast, seemingly endless expanse beyond Earth's atmosphere.",
+  "what is the universe": "The universe is everything that exists — all matter, energy, planets, stars, and galaxies.",
+  "what is an atom": "An atom is the smallest unit of matter that retains the properties of an element.",
+  "what is AI": "AI, or Artificial Intelligence, is the simulation of human intelligence in machines that can think and learn.",
+  "what is a planet": "A planet is a celestial body that orbits a star and is large enough to have its own gravity.",
+  "what is photosynthesis": "Photosynthesis is the process by which plants make food using sunlight, carbon dioxide, and water.",
+  "what is a robot": "A robot is a machine designed to carry out tasks automatically or under human control.",
+  "what is coding": "Coding is the process of writing instructions that tell a computer what to do.",
+  "what is the brain": "The brain is the organ in your head that controls thoughts, memory, feelings, and body functions.",
+  "what is life": "Life is the condition that distinguishes living organisms from non-living things.",
+  "what is energy": "Energy is the ability to do work or cause change in matter.",
+  "what is science": "Science is the study of the natural world through observation and experiment.",
+  "what is art": "Art is the expression of human creativity through visual, auditory, or performance works.",
+  "what is music": "Music is the organized combination of sounds that express emotions or ideas.",
+  "what is history": "History is the study of past events and human civilization.",
+  "what is technology": "Technology is the use of knowledge, tools, and systems to solve problems and make life easier.",
+  "what is math": "Math is the study of numbers, quantities, shapes, and patterns.",
+  "what is programming": "Programming is the act of creating software by writing code that computers can understand and execute.",
+  "what is a galaxy": "A galaxy is a massive system of stars, gas, dust, and dark matter held together by gravity.",
+  "what is the milky way": "The Milky Way is the galaxy that contains our solar system.",
+  "what is a star": "A star is a glowing ball of gas that produces light and heat through nuclear fusion.",
+  "what is a black hole": "A black hole is a region in space with gravity so strong that nothing, not even light, can escape from it.",
+  "what is the earth": "Earth is the third planet from the Sun and the only known planet to support life.",
+  "what is the ocean": "The ocean is a vast body of salt water that covers most of Earth's surface.",
+  "what is a volcano": "A volcano is an opening in Earth's crust that allows molten rock, ash, and gases to escape.",
+  "what is an earthquake": "An earthquake is the shaking of the ground caused by sudden movements of Earth's crust.",
+  "what is rain": "Rain is water droplets that fall from clouds when they become heavy enough.",
+  "what is snow": "Snow is frozen water vapor that forms ice crystals and falls as flakes.",
+  "what is wind": "Wind is the movement of air caused by differences in air pressure.",
+  "what is fire": "Fire is a chemical reaction that produces heat, light, and flames.",
+  "what is ice": "Ice is the solid form of water when it freezes below 0°C.",
+  "what is a tree": "A tree is a tall plant with a trunk, branches, and leaves.",
+  "what is a flower": "A flower is the colorful part of a plant that produces seeds or fruit.",
+  "what is an animal": "An animal is a living organism that can move and respond to its environment.",
+  "what is a human": "A human is a member of the species Homo sapiens, known for intelligence and communication.",
+  "what is a cell": "A cell is the smallest unit of life in all living things.",
+  "what is DNA": "DNA is the molecule that carries genetic information in living organisms.",
+  "what is blood": "Blood is the fluid that carries oxygen and nutrients throughout the body.",
+  "what is a virus": "A virus is a tiny infectious particle that can only reproduce inside a host organism.",
+  "what is a bacteria": "Bacteria are microscopic single-celled organisms found everywhere on Earth.",
+  "what is the heart": "The heart is the organ that pumps blood throughout the body.",
+  "what is the brain": "The brain is the control center of the body responsible for thinking and coordination.",
+  "what is sleep": "Sleep is a natural state of rest that helps the body and mind recover.",
+  "what is a dream": "A dream is a series of thoughts, images, and sensations that occur during sleep.",
+  "what is fear": "Fear is an emotion caused by the perception of danger or threat.",
+  "what is happiness": "Happiness is a feeling of joy, satisfaction, or contentment.",
+  "what is sadness": "Sadness is an emotion of unhappiness or sorrow.",
+  "what is anger": "Anger is a strong feeling of annoyance or hostility.",
+  "what is friendship": "Friendship is a close and trusting relationship between people.",
+  "what is family": "Family is a group of related people who support and care for each other.",
+  "what is money": "Money is a medium of exchange used to buy goods and services.",
+  "what is work": "Work is any activity done to achieve a purpose or earn income.",
+  "what is education": "Education is the process of gaining knowledge, skills, and understanding.",
+  "what is health": "Health is the state of physical, mental, and emotional well-being.",
+  "what is medicine": "Medicine is the science and practice of diagnosing and treating illness.",
+  "what is a doctor": "A doctor is a trained professional who helps maintain or restore health.",
+  "what is a teacher": "A teacher is someone who helps others learn new knowledge or skills.",
+  "what is a student": "A student is a person who studies to gain knowledge or skills.",
+  "what is language": "Language is a system of communication using words, sounds, or symbols.",
+  "what is writing": "Writing is the act of recording words or ideas using symbols or letters.",
+  "what is reading": "Reading is the process of understanding written or printed words.",
+  "what is a book": "A book is a collection of written or printed pages bound together.",
+  "what is art": "Art is the creative expression of ideas and emotions through various forms.",
+  "what is dance": "Dance is the art of expressing emotions through rhythmic body movement.",
+  "what is painting": "Painting is the act of applying colors to a surface to create an image.",
+  "what is a song": "A song is a musical composition with melody and lyrics.",
+  "what is sound": "Sound is vibration that travels through air or another medium and can be heard.",
+  "what is film": "Film is a visual storytelling medium using moving images.",
+  "what is internet": "The internet is a network that connects computers worldwide for communication and data sharing.",
+  "what is a phone": "A phone is a device used to communicate with others over long distances.",
+  "what is social media": "Social media are platforms that allow people to share content and interact online.",
+  "what is youtube": "YouTube is an online platform where users can watch, upload, and share videos.",
+  "what is google": "Google is a search engine that helps users find information on the internet.",
+  "what is electricity": "Electricity is energy from charged particles that powers devices.",
+  "what is magnetism": "Magnetism is a physical force that attracts or repels magnetic materials.",
+  "what is speed": "Speed is how fast an object moves over time.",
+    };
+    let lastQuestion = "";
+
+    memory.forEach(({ role, content }) => addMessage(role, content));
+
+    function addMessage(role, text) {
+      const wrapper = document.createElement("div");
+      wrapper.className = `message ${role}`;
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.textContent = role === "user" ? "🧑" : "🤖";
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = text;
+      wrapper.appendChild(avatar);
+      wrapper.appendChild(bubble);
+      messagesDiv.appendChild(wrapper);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function speak(text) {
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = 1;
+      speechSynthesis.speak(utter);
+    }
+
+    function saveMemory(role, content) {
+      memory.push({ role, content });
+      localStorage.setItem("chat_memory", JSON.stringify(memory));
+    }
+
+    function clearMemory() {
+      memory = [];
+      knowledge = {};
+      localStorage.removeItem("chat_memory");
+      localStorage.removeItem("chat_knowledge");
+      messagesDiv.innerHTML = "";
+      addMessage("bot", "Memory and knowledge cleared. I’m a blank slate!");
+    }
+
+    function sendMessage() {
+      const userText = input.value.trim();
+      if (!userText) return;
+      input.value = "";
+
+      addMessage("user", userText);
+      saveMemory("user", userText);
+
+      if (lastQuestion && userText.length < 200) {
+        knowledge[lastQuestion.toLowerCase()] = userText;
+        localStorage.setItem("chat_knowledge", JSON.stringify(knowledge));
+        const confirm = "Got it! I’ll remember that.";
+        addMessage("bot", confirm);
+        speak(confirm);
+        saveMemory("bot", confirm);
+        lastQuestion = "";
+        return;
+      }
+
+      const reply = generateResponse(userText);
+      addMessage("bot", reply);
+      speak(reply);
+      saveMemory("bot", reply);
+    }
+
+    function generateResponse(text) {
+      const lower = text.toLowerCase();
+      const personality = personalitySelect.value;
+
+      if (knowledge[lower]) return knowledge[lower];
+
+      if (lower.includes("who are you")) {
+        return "I'm LearnBot, a self-learning chatbot. Teach me anything and I’ll remember it!";
+      }
+
+      if (lower.includes("remember")) {
+        const keys = Object.keys(knowledge);
+        return keys.length ? "So far, I’ve learned: " + keys.join(", ") : "I haven’t learned anything yet. Teach me something!";
+      }
+
+      lastQuestion = lower;
+      return {
+        curious: "Hmm, I don’t know that yet. Can you teach me?",
+        humorous: "My circuits just sparked... I have no idea! Want to enlighten me?",
+        formal: "I regret to inform you that I lack that knowledge. Would you kindly teach me?"
+      }[personality];
+    }
+
+    function startVoice() {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = "en-US";
+      recognition.start();
+      recognition.onresult = (event) => {
+        const text = event.results[0][0].transcript;
+        input.value = text;
+        sendMessage();
+      };
+    }
+  </script>
+</body>
+</html>
